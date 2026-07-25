@@ -759,12 +759,11 @@
 
     <script>
         // =========================================================================
-        // CONFIGURATION: DIRECT GOOGLE VISUALIZATION API & APPS SCRIPT
+        // CONFIGURATION: APPS SCRIPT WEB APP ENDPOINT
         // =========================================================================
-        const PUBLISHED_SHEET_KEY = "2PACX-1vT6VNuoyGIks8ZFEfzeV-nxwzbSNIw_z3zyqseIphtjJZuU3ioZvXjjjPdMxU2FtftWJpVxIlKRewEw";
-        const GVIZ_API_URL = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_SHEET_KEY}/gviz/tq?tqx=out:json`;
         const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx1r_ETWB7yVjDjHgoy_c-gQivTZkPFdn38vPmjcRE-u66SiedvgHJLCLW9cZKm-vs/exec"; 
 
+        // Automatic Hotel Lookup Map for 1-Touch Directions
         const HOTEL_ORIGINS = {
             'verona': 'Moxy Verona',
             'venice': "Hotel L'Orologio Venezia",
@@ -773,9 +772,11 @@
             'positano': 'Villa Mary Suites Positano'
         };
 
+        // Modal Controls
         function openModal() { document.getElementById('addSpotModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('addSpotModal').style.display = 'none'; }
 
+        // Timeline Category Filtering
         function filterCategory(category) {
             const buttons = document.querySelectorAll('.filter-nav .filter-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
@@ -793,6 +794,7 @@
             });
         }
 
+        // Mobile Sidebar Toggle
         function toggleSidebar() {
             const sidebar = document.getElementById('bookmarks-sidebar');
             sidebar.classList.toggle('open');
@@ -806,6 +808,9 @@
             }
         }
 
+        // =========================================================================
+        // DIRECT MODAL SUBMISSION TO GOOGLE SHEETS
+        // =========================================================================
         async function submitSpot() {
             const city = document.getElementById('formCity').value;
             const type = document.getElementById('formType').value;
@@ -824,8 +829,10 @@
             btn.innerText = 'Saving...';
             btn.disabled = true;
 
+            // Render immediately on screen for instantaneous user feedback
             renderBookmarkCard(city.toLowerCase(), type.toLowerCase(), name, tag, address, desc, link);
 
+            // Send payload to Google Apps Script
             if (GOOGLE_SCRIPT_WEB_APP_URL) {
                 try {
                     await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
@@ -843,6 +850,7 @@
             btn.disabled = false;
             closeModal();
 
+            // Clear inputs
             document.getElementById('formName').value = '';
             document.getElementById('formTag').value = '';
             document.getElementById('formAddress').value = '';
@@ -850,31 +858,32 @@
             document.getElementById('formLink').value = '';
         }
 
-        // INSTANT GOOGLE SHEETS DATA FETCH VIA /gviz/tq
+        // =========================================================================
+        // INSTANT GOOGLE SHEETS DATA FETCH VIA APPS SCRIPT
+        // =========================================================================
         async function fetchSheetData() {
+            if (!GOOGLE_SCRIPT_WEB_APP_URL) {
+                renderFallbackBookmarks();
+                return;
+            }
+
             try {
-                const response = await fetch(GVIZ_API_URL);
-                const text = await response.text();
-                
-                // Strip Google's JSONP wrapper: /*O_o*/ google.visualization.Query.setResponse({...});
-                const jsonString = text.substring(47, text.length - 2);
-                const json = JSON.parse(jsonString);
+                const response = await fetch(GOOGLE_SCRIPT_WEB_APP_URL);
+                const result = await response.json();
 
                 document.querySelectorAll('.loading-text').forEach(el => el.remove());
 
-                if (json && json.table && json.table.rows && json.table.rows.length > 0) {
-                    json.table.rows.forEach(row => {
-                        if (!row || !row.c) return;
-                        const c = row.c;
-
-                        // Expected Columns: [0:Timestamp, 1:City, 2:Type, 3:Name, 4:Tag, 5:Address, 6:Desc, 7:Link]
-                        const city = (c[1] && c[1].v ? c[1].v : '').toString().trim().toLowerCase();
-                        const type = (c[2] && c[2].v ? c[2].v : 'Food').toString().trim().toLowerCase();
-                        const name = (c[3] && c[3].v ? c[3].v : '').toString().trim();
-                        const tag = (c[4] && c[4].v ? c[4].v : (type === 'activity' ? 'Activity' : 'Food Spot')).toString().trim();
-                        const address = (c[5] && c[5].v ? c[5].v : '').toString().trim();
-                        const desc = (c[6] && c[6].v ? c[6].v : '').toString().trim();
-                        const link = (c[7] && c[7].v ? c[7].v : '').toString().trim();
+                if (result && result.result === 'success' && Array.isArray(result.data)) {
+                    // Rows format: [0:Timestamp, 1:City, 2:Type, 3:Name, 4:Tag, 5:Address, 6:Description, 7:Website Link]
+                    result.data.slice(1).forEach(row => {
+                        if (!row || row.length < 4) return;
+                        const city = (row[1] || '').toString().trim().toLowerCase();
+                        const type = (row[2] || 'Food').toString().trim().toLowerCase();
+                        const name = (row[3] || '').toString().trim();
+                        const tag = (row[4] || (type === 'activity' ? 'Activity' : 'Food Spot')).toString().trim();
+                        const address = (row[5] || '').toString().trim();
+                        const desc = (row[6] || '').toString().trim();
+                        const link = (row[7] || '').toString().trim();
 
                         if (name && city) {
                             renderBookmarkCard(city, type, name, tag, address, desc, link);
@@ -884,7 +893,7 @@
                     renderFallbackBookmarks();
                 }
             } catch (err) {
-                console.error("Error loading Google Sheet via GViz:", err);
+                console.error("Error loading via Apps Script:", err);
                 renderFallbackBookmarks();
             }
         }
