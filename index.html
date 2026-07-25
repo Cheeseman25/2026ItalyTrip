@@ -104,7 +104,7 @@
         .sidebar-title { font-family: 'Georgia', serif; font-size: 1.25rem; color: var(--primary-color); display: flex; align-items: center; gap: 6px; }
         .add-spot-btn {
             background: #9b5de5; color: white; border: none; padding: 6px 12px; border-radius: 15px;
-            font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: background 0.2s; text-decoration: none;
+            font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: background 0.2s;
         }
         .add-spot-btn:hover { background: #7b3fd3; }
 
@@ -115,6 +115,23 @@
         .bookmark-card h4 { font-family: 'Georgia', serif; font-size: 1.05rem; color: var(--text-dark); }
         .bookmark-meta { font-size: 0.8rem; color: #666; margin-top: 4px; }
         .loading-text { font-size: 0.85rem; color: #888; font-style: italic; text-align: center; padding: 10px 0; }
+
+        /* Modal Overlay & Form */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-card {
+            background: white; border-radius: 12px; max-width: 450px; width: 100%; padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative;
+        }
+        .modal-card h3 { font-family: 'Georgia', serif; margin-bottom: 15px; color: var(--primary-color); }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; color: #555; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;
+        }
+        .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
 
         /* Floating Mobile Toggle for Sidebar */
         .mobile-food-toggle {
@@ -657,11 +674,11 @@
 
         </div>
 
-        <!-- BOOKMARKS & IDEAS SIDE PANEL (DYNAMIC DYNAMIC GOOGLE SHEETS ENGINE) -->
+        <!-- BOOKMARKS & IDEAS SIDE PANEL -->
         <div class="bookmarks-sidebar" id="bookmarks-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-title">📌 Bookmarks & Ideas</div>
-                <a href="#" id="googleFormLink" target="_blank" class="add-spot-btn">+ Add Spot</a>
+                <button onclick="openModal()" class="add-spot-btn">+ Add Spot</button>
             </div>
             
             <div class="city-group" id="group-verona">
@@ -692,16 +709,60 @@
 
     </div>
 
+    <!-- IN-SITE SUBMISSION MODAL -->
+    <div class="modal-overlay" id="addSpotModal">
+        <div class="modal-card">
+            <h3>📍 Add Spot / Idea</h3>
+            <div class="form-group">
+                <label>Category Type</label>
+                <select id="formType">
+                    <option value="Food">Food / Restaurant</option>
+                    <option value="Activity">Activity / Sight</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>City Location</label>
+                <select id="formCity">
+                    <option value="Verona">Verona</option>
+                    <option value="Venice">Venice</option>
+                    <option value="Florence">Florence</option>
+                    <option value="Rome">Rome</option>
+                    <option value="Positano">Positano</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Spot Name</label>
+                <input type="text" id="formName" placeholder="e.g. Trattoria da Enzo">
+            </div>
+            <div class="form-group">
+                <label>Tag Badge</label>
+                <input type="text" id="formTag" placeholder="e.g. Must Visit, Gelato, Workshop, Sight">
+            </div>
+            <div class="form-group">
+                <label>Address or Neighborhood (Generates Walking Directions)</label>
+                <input type="text" id="formAddress" placeholder="e.g. Via dei Coronari 65, Rome">
+            </div>
+            <div class="form-group">
+                <label>Description / Notes</label>
+                <textarea id="formDesc" rows="2" placeholder="Why we should visit or key highlights..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Website Link (Optional)</label>
+                <input type="url" id="formLink" placeholder="https://...">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" style="background:#888;" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-secondary" id="submitBtn" onclick="submitSpot()">Save Spot</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // =========================================================================
-        // CONFIGURATION: PASTE YOUR PUBLISHED GOOGLE SHEET CSV & FORM LINKS HERE
+        // CONFIGURATION: LIVE GOOGLE SCRIPT WEB APP & PUBLISHED CSV URLS
         // =========================================================================
-        const GOOGLE_SHEET_CSV_URL = "YOUR_PUBLISHED_GOOGLE_SHEET_CSV_URL_HERE";
-        const GOOGLE_FORM_URL = "YOUR_GOOGLE_FORM_URL_HERE"; 
-
-        if (GOOGLE_FORM_URL && GOOGLE_FORM_URL !== "YOUR_GOOGLE_FORM_URL_HERE") {
-            document.getElementById('googleFormLink').href = GOOGLE_FORM_URL;
-        }
+        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT6VNuoyGIks8ZFEfzeV-nxwzbSNIw_z3zyqseIphtjJZuU3ioZvXjjjPdMxU2FtftWJpVxIlKRewEw/pub?output=csv";
+        const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx1r_ETWB7yVjDjHgoy_c-gQivTZkPFdn38vPmjcRE-u66SiedvgHJLCLW9cZKm-vs/exec"; 
 
         // Automatic Hotel Lookup Map for 1-Touch Directions
         const HOTEL_ORIGINS = {
@@ -712,9 +773,13 @@
             'positano': 'Villa Mary Suites Positano'
         };
 
+        // Modal Controls
+        function openModal() { document.getElementById('addSpotModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('addSpotModal').style.display = 'none'; }
+
         // Timeline Category Filtering
         function filterCategory(category) {
-            const buttons = document.querySelectorAll('.filter-btn');
+            const buttons = document.querySelectorAll('.filter-nav .filter-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
@@ -745,10 +810,60 @@
         }
 
         // =========================================================================
-        // DYNAMIC GOOGLE SHEET CSV FETCH & PARSER (SUPPORTING AUTOMATED WALKING ROUTES)
+        // DIRECT MODAL SUBMISSION TO GOOGLE SHEETS
+        // =========================================================================
+        async function submitSpot() {
+            const city = document.getElementById('formCity').value;
+            const type = document.getElementById('formType').value;
+            const name = document.getElementById('formName').value.trim();
+            const tag = document.getElementById('formTag').value.trim() || (type === 'Activity' ? 'Activity' : 'Recommended');
+            const address = document.getElementById('formAddress').value.trim();
+            const desc = document.getElementById('formDesc').value.trim();
+            const link = document.getElementById('formLink').value.trim();
+
+            if (!name) {
+                alert('Please enter a spot name.');
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            // Render immediately on screen for instantaneous user feedback
+            renderBookmarkCard(city.toLowerCase(), type.toLowerCase(), name, tag, address, desc, link);
+
+            // Send payload to Google Apps Script
+            if (GOOGLE_SCRIPT_WEB_APP_URL) {
+                try {
+                    await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ city, type, name, tag, address, desc, link })
+                    });
+                } catch (e) {
+                    console.error("Script posting error:", e);
+                }
+            }
+
+            btn.innerText = 'Save Spot';
+            btn.disabled = false;
+            closeModal();
+
+            // Clear inputs
+            document.getElementById('formName').value = '';
+            document.getElementById('formTag').value = '';
+            document.getElementById('formAddress').value = '';
+            document.getElementById('formDesc').value = '';
+            document.getElementById('formLink').value = '';
+        }
+
+        // =========================================================================
+        // DYNAMIC GOOGLE SHEET CSV FETCH & PARSER
         // =========================================================================
         async function fetchSheetData() {
-            if (!GOOGLE_SHEET_CSV_URL || GOOGLE_SHEET_CSV_URL === "YOUR_PUBLISHED_GOOGLE_SHEET_CSV_URL_HERE") {
+            if (!GOOGLE_SHEET_CSV_URL) {
                 renderFallbackBookmarks();
                 return;
             }
@@ -815,7 +930,6 @@
 
             let buttonsHtml = '';
             
-            // Generate 1-Touch Walking Directions if address or spot name exists
             const destinationQuery = address || `${name}, ${city}`;
             const originHotel = HOTEL_ORIGINS[city.toLowerCase()] || '';
             const routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originHotel)}&destination=${encodeURIComponent(destinationQuery)}&travelmode=walking`;
@@ -838,7 +952,6 @@
             container.appendChild(card);
         }
 
-        // Fallback static bookmarks if Sheet URL isn't pasted yet
         function renderFallbackBookmarks() {
             document.querySelectorAll('.loading-text').forEach(el => el.remove());
             renderBookmarkCard('verona', 'food', 'Cantina del 15', 'Lunch Spot', 'Corso Castelvecchio 15, Verona', 'Casual upscale lunch layout near Castelvecchio.', '');
