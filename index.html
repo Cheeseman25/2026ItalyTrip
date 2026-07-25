@@ -709,7 +709,7 @@
 
     </div>
 
-    <!-- IN-SITE SUBMISSION MODAL -->
+    <!-- IN-SITE SUBMISSION MODAL WITH STRICT DROPDOWNS -->
     <div class="modal-overlay" id="addSpotModal">
         <div class="modal-card">
             <h3>📍 Add Spot / Idea</h3>
@@ -723,20 +723,20 @@
             <div class="form-group">
                 <label>City Location</label>
                 <select id="formCity">
-                    <option value="Verona">Verona</option>
-                    <option value="Venice">Venice</option>
-                    <option value="Florence">Florence</option>
-                    <option value="Rome">Rome</option>
-                    <option value="Positano">Positano</option>
+                    <option value="verona">Verona</option>
+                    <option value="venice">Venice</option>
+                    <option value="florence">Florence</option>
+                    <option value="rome">Rome</option>
+                    <option value="positano">Positano</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Spot Name</label>
-                <input type="text" id="formName" placeholder="e.g. Trattoria da Enzo">
+                <input type="text" id="formName" placeholder="e.g. La Strega">
             </div>
             <div class="form-group">
                 <label>Tag Badge</label>
-                <input type="text" id="formTag" placeholder="e.g. Must Visit, Gelato, Workshop, Sight">
+                <input type="text" id="formTag" placeholder="e.g. Dinner, Gelato, Must Visit">
             </div>
             <div class="form-group">
                 <label>Address or Neighborhood (Generates Walking Directions)</label>
@@ -812,8 +812,8 @@
         // DIRECT MODAL SUBMISSION TO GOOGLE SHEETS
         // =========================================================================
         async function submitSpot() {
-            const city = document.getElementById('formCity').value;
-            const type = document.getElementById('formType').value;
+            const city = document.getElementById('formCity').value; // lowercase
+            const type = document.getElementById('formType').value; // Food or Activity
             const name = document.getElementById('formName').value.trim();
             const tag = document.getElementById('formTag').value.trim() || (type === 'Activity' ? 'Activity' : 'Recommended');
             const address = document.getElementById('formAddress').value.trim();
@@ -830,7 +830,7 @@
             btn.disabled = true;
 
             // Render immediately on screen for instantaneous user feedback
-            renderBookmarkCard(city.toLowerCase(), type.toLowerCase(), name, tag, address, desc, link);
+            renderBookmarkCard(city, type.toLowerCase(), name, tag, address, desc, link);
 
             // Send payload to Google Apps Script
             if (GOOGLE_SCRIPT_WEB_APP_URL) {
