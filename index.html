@@ -43,7 +43,7 @@
         /* Master Grid Layout for Timeline + Side Panel */
         .dashboard-layout {
             max-width: 1300px; margin: 30px auto; padding: 0 20px;
-            display: grid; grid-template-columns: 1fr 320px; gap: 30px;
+            display: grid; grid-template-columns: 1fr 340px; gap: 30px;
         }
         
         /* Alternating Timeline Structure */
@@ -73,7 +73,8 @@
         .status-badge { padding: 3px 8px; border-radius: 4px; color: white; }
         .status-badge.ok { background: var(--status-confirmed); }
         .status-badge.action { background: var(--status-pending); }
-        .status-badge.bookmark { background: #9b5de5; }
+        .status-badge.food-tag { background: #9b5de5; }
+        .status-badge.activity-tag { background: #ff6e40; }
 
         /* Directions Icon Action Link */
         .maps-icon-link {
@@ -91,21 +92,30 @@
         .details-list li { margin-bottom: 8px; padding-left: 20px; position: relative; }
         .details-list li::before { content: '•'; position: absolute; left: 0; color: var(--secondary-color); font-weight: bold; }
         
-        /* Culinary Side Panel Design with Independent Viewport Scrolling */
-        .culinary-sidebar {
-            background: var(--card-bg); padding: 25px; border-radius: 12px;
+        /* Sidebar Panel Design with Independent Scrolling */
+        .bookmarks-sidebar {
+            background: var(--card-bg); padding: 22px; border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-top: 5px solid #9b5de5;
             position: sticky; top: 80px;
             max-height: calc(100vh - 100px);
             overflow-y: auto;
         }
-        .sidebar-title { font-family: 'Georgia', serif; font-size: 1.4rem; color: var(--primary-color); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .sidebar-title { font-family: 'Georgia', serif; font-size: 1.25rem; color: var(--primary-color); display: flex; align-items: center; gap: 6px; }
+        .add-spot-btn {
+            background: #9b5de5; color: white; border: none; padding: 6px 12px; border-radius: 15px;
+            font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: background 0.2s; text-decoration: none;
+        }
+        .add-spot-btn:hover { background: #7b3fd3; }
+
         .city-group { margin-bottom: 20px; }
         .city-name { font-weight: bold; text-transform: uppercase; font-size: 0.85rem; color: #777; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 10px; }
-        .food-card { background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #9b5de5; position: relative; }
-        .food-card h4 { font-family: 'Georgia', serif; font-size: 1.05rem; color: var(--text-dark); }
-        .food-meta { font-size: 0.8rem; color: #666; margin-top: 4px; }
-        
+        .bookmark-card { background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #9b5de5; position: relative; }
+        .bookmark-card.type-activity { border-left-color: #ff6e40; }
+        .bookmark-card h4 { font-family: 'Georgia', serif; font-size: 1.05rem; color: var(--text-dark); }
+        .bookmark-meta { font-size: 0.8rem; color: #666; margin-top: 4px; }
+        .loading-text { font-size: 0.85rem; color: #888; font-style: italic; text-align: center; padding: 10px 0; }
+
         /* Floating Mobile Toggle for Sidebar */
         .mobile-food-toggle {
             display: none; position: fixed; bottom: 20px; right: 20px; background: #9b5de5; color: white;
@@ -127,15 +137,16 @@
         .btn-secondary { background-color: var(--secondary-color); }
         .btn-secondary:hover { background-color: #e05326; }
         .btn-sidebar { background: #9b5de5; font-size: 0.75rem; padding: 4px 8px; margin-top: 6px; text-align: center; }
-        .btn-sidebar:hover { background: #7b3fd3; }
+        .btn-sidebar.route-btn { background: #4285F4; }
+        .btn-sidebar:hover { opacity: 0.9; }
 
         @media screen and (max-width: 992px) {
             .dashboard-layout { grid-template-columns: 1fr; }
-            .culinary-sidebar { 
-                position: fixed; top: 0; right: -340px; width: 320px; height: 100vh; 
+            .bookmarks-sidebar { 
+                position: fixed; top: 0; right: -360px; width: 340px; height: 100vh; 
                 max-height: 100vh; z-index: 2000; overflow-y: auto; transition: right 0.3s ease; border-radius: 0;
             }
-            .culinary-sidebar.open { right: 0; }
+            .bookmarks-sidebar.open { right: 0; }
             .mobile-food-toggle { display: flex; }
         }
 
@@ -162,7 +173,7 @@
     </div>
 
     <!-- Toggle Button for Mobile Devices -->
-    <button class="mobile-food-toggle" onclick="toggleSidebar()">🍴 Food Bookmarks</button>
+    <button class="mobile-food-toggle" onclick="toggleSidebar()">📌 Bookmarks & Ideas</button>
 
     <div class="dashboard-layout">
         
@@ -507,27 +518,9 @@
                 </div>
             </div>
 
-            <!-- Day 8: Rome Activity - Shared Target -->
+            <!-- Day 8: Rome Activity - Zoo -->
             <div class="day-card right type-activity">
                 <div class="content right-accent">
-                    <div class="status-header">
-                        <span class="date">Aug 12, 2026</span>
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=41.9022,12.4539&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
-                    </div>
-                    <h3>Exploration Stop (Rome Shared Drop)</h3>
-                    <ul class="details-list">
-                        <li><strong>Destination:</strong> Custom pinpoint saved list entry layout added.</li>
-                        <li><strong>Access:</strong> Tap the action buttons below to open directly in your mapping layouts.</li>
-                    </ul>
-                    <div class="btn-group">
-                        <a href="https://share.google/jNkOcp3lmzydOuoyT" target="_blank" class="btn btn-secondary">View Shared Location</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Day 8: Rome Activity - Zoo -->
-            <div class="day-card left type-activity">
-                <div class="content">
                     <div class="status-header">
                         <span class="date">Aug 12-13, 2026</span>
                         <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Bioparco+di+Roma&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
@@ -540,46 +533,9 @@
                 </div>
             </div>
 
-            <!-- Day 8: Rome Unscheduled - Mosaic Workshop -->
-            <div class="day-card right type-activity">
-                <div class="content right-accent">
-                    <div class="status-header">
-                        <span class="date">Aug 11 - 14, 2026</span>
-                        <span class="status-badge action">Unscheduled</span>
-                    </div>
-                    <h3>Mosaic Making Workshop (Trastevere)</h3>
-                    <ul class="details-list">
-                        <li><strong>Location:</strong> Trastevere District, Rome</li>
-                        <li><strong>Activity:</strong> Hands-on artisan mosaic workshop craft experience.</li>
-                    </ul>
-                    <div class="btn-group">
-                        <a href="https://www.romeing.it/shop/product/mosaic-making-worshop-rome-trastevere/" target="_blank" class="btn btn-secondary">Workshop Info & Booking</a>
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Trastevere,+Rome&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Day 8: Rome Evening Event - Lungo il Tevere -->
-            <div class="day-card left type-activity">
-                <div class="content">
-                    <div class="status-header">
-                        <span class="date">Aug 11 - 13 Evenings</span>
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Lungo+il+Tevere+Roma&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
-                    </div>
-                    <h3>Lungo il Tevere Roma (Summer Festival)</h3>
-                    <ul class="details-list">
-                        <li><strong>Hours:</strong> 7:00 PM – 2:00 AM (Nightly)</li>
-                        <li><strong>Experience:</strong> Vibrant riverside summer festival along the Tiber featuring food pop-ups, artisan stalls, live music, and evening walks.</li>
-                    </ul>
-                    <div class="btn-group">
-                        <a href="https://www.lungoiltevereroma.it/" target="_blank" class="btn">Festival Website</a>
-                    </div>
-                </div>
-            </div>
-
             <!-- Day 10: Transit to South - Train -->
-            <div class="day-card right type-transit">
-                <div class="content right-accent">
+            <div class="day-card left type-transit">
+                <div class="content">
                     <div class="status-header">
                         <span class="date">Aug 14, 2026</span>
                         <span class="status-badge ok">Confirmed</span>
@@ -602,8 +558,8 @@
             </div>
 
             <!-- Day 10: Car Service Pompeii & Positano Transfer -->
-            <div class="day-card left type-transit">
-                <div class="content">
+            <div class="day-card right type-transit">
+                <div class="content right-accent">
                     <div class="status-header">
                         <span class="date">Aug 14, 2026</span>
                         <span class="status-badge action">Action Required</span>
@@ -616,8 +572,8 @@
             </div>
 
             <!-- Day 10: Positano Villa -->
-            <div class="day-card right type-hotel">
-                <div class="content right-accent">
+            <div class="day-card left type-hotel">
+                <div class="content">
                     <div class="status-header">
                         <span class="date">Aug 14 - 16, 2026</span>
                         <span class="status-badge ok">Confirmed</span>
@@ -634,8 +590,8 @@
             </div>
 
             <!-- Day 11: Food Activity -->
-            <div class="day-card left type-activity">
-                <div class="content">
+            <div class="day-card right type-activity">
+                <div class="content right-accent">
                     <div class="status-header">
                         <span class="date">Aug 15, 2026</span>
                         <span class="status-badge action">Awaiting Reply</span>
@@ -648,8 +604,8 @@
             </div>
 
             <!-- Day 12: Return Transit North -->
-            <div class="day-card right type-transit">
-                <div class="content right-accent">
+            <div class="day-card left type-transit">
+                <div class="content">
                     <div class="status-header">
                         <span class="date">Aug 16, 2026</span>
                         <span class="status-badge action">Action Required</span>
@@ -662,8 +618,8 @@
             </div>
 
             <!-- Day 12: Rome Final Stay Buffer -->
-            <div class="day-card left type-hotel">
-                <div class="content">
+            <div class="day-card right type-hotel">
+                <div class="content right-accent">
                     <div class="status-header">
                         <span class="date">Aug 16 - 18, 2026</span>
                         <span class="status-badge ok">Confirmed</span>
@@ -681,8 +637,8 @@
             </div>
 
             <!-- Day 14: International Flight Home -->
-            <div class="day-card right type-transit">
-                <div class="content right-accent">
+            <div class="day-card left type-transit">
+                <div class="content">
                     <div class="status-header">
                         <span class="date">Aug 18, 2026</span>
                         <span class="status-badge ok">Confirmed</span>
@@ -701,101 +657,64 @@
 
         </div>
 
-        <!-- CULINARY BOOKMARKS SIDE PANEL -->
-        <div class="culinary-sidebar" id="culinary-sidebar">
-            <div class="sidebar-title">🍴 Culinary Bookmarks</div>
+        <!-- BOOKMARKS & IDEAS SIDE PANEL (DYNAMIC DYNAMIC GOOGLE SHEETS ENGINE) -->
+        <div class="bookmarks-sidebar" id="bookmarks-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">📌 Bookmarks & Ideas</div>
+                <a href="#" id="googleFormLink" target="_blank" class="add-spot-btn">+ Add Spot</a>
+            </div>
             
-            <!-- Verona Bookmarks -->
-            <div class="city-group">
+            <div class="city-group" id="group-verona">
                 <div class="city-name">Verona (Aug 5-7)</div>
-                
-                <!-- Cantina del 15 -->
-                <div class="food-card" style="border-left-color: #ffc13b;">
-                    <div class="status-header">
-                        <h4>Cantina del 15</h4>
-                        <span class="status-badge bookmark" style="background:#ffc13b;">Lunch Spot</span>
-                    </div>
-                    <p class="food-meta">Highly tracking casual upscale lunch layout. Fantastic local plates and wines near Castelvecchio.</p>
-                    <div class="btn-group">
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=Castelvecchio,+Verona&destination=Cantina+del+15+Verona&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Castle</a>
-                    </div>
-                </div>
-
-                <div class="food-card">
-                    <div class="status-header">
-                        <h4>La Bottega della Gina</h4>
-                        <span class="status-badge bookmark">No Res</span>
-                    </div>
-                    <p class="food-meta">Famous for spectacular handmade tortellini & fresh pasta bowls.</p>
-                    <div class="btn-group">
-                        <a href="https://labottegadellagina.weebly.com/english.html" target="_blank" class="btn btn-sidebar">View Menu Links</a>
-                        <a href="https://www.google.com/maps/dir/?api=1&destination=La+Bottega+della+Gina+Verona&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Map Route</a>
-                    </div>
-                </div>
+                <div class="loading-text">Syncing from Google Sheet...</div>
             </div>
 
-            <!-- Venice Bookmarks Placeholder -->
-            <div class="city-group">
+            <div class="city-group" id="group-venice">
                 <div class="city-name">Venice (Aug 7-9)</div>
-                <p style="font-size:0.85rem; color:#999; font-style:italic;">No bookmarks added yet.</p>
+                <div class="loading-text">Syncing from Google Sheet...</div>
             </div>
 
-            <!-- Florence Bookmarks -->
-            <div class="city-group">
+            <div class="city-group" id="group-florence">
                 <div class="city-name">Florence (Aug 9-11)</div>
-                
-                <!-- All'Antico Vinaio -->
-                <div class="food-card">
-                    <div class="status-header">
-                        <h4>All'Antico Vinaio</h4>
-                        <span class="status-badge bookmark">Must Visit</span>
-                    </div>
-                    <p class="food-meta">Iconic Florentine schiacciata stuffed sandwiches. Expect a quick-moving line!</p>
-                    <div class="btn-group">
-                        <a href="https://www.allanticovinaio.com/" target="_blank" class="btn btn-sidebar">Official Site</a>
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=Cattedrale+di+Santa+Maria+del+Fiore&destination=All'Antico+Vinaio+Florence&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Duomo</a>
-                    </div>
-                </div>
-
-                <!-- Vivoli Gelateria -->
-                <div class="food-card" style="border-left-color: #2ec4b6;">
-                    <div class="status-header">
-                        <h4>Vivoli Gelateria</h4>
-                        <span class="status-badge bookmark" style="background:#2ec4b6;">Gelato</span>
-                    </div>
-                    <p class="food-meta">One of Florence's oldest artisan gelaterias, famous for classic gelato & affogato.</p>
-                    <div class="btn-group">
-                        <a href="http://www.vivoli.it/" target="_blank" class="btn btn-sidebar">Official Site</a>
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=Cattedrale+di+Santa+Maria+del+Fiore&destination=Vivoli+Florence&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Duomo</a>
-                    </div>
-                </div>
+                <div class="loading-text">Syncing from Google Sheet...</div>
             </div>
 
-            <!-- Rome Bookmarks -->
-            <div class="city-group">
+            <div class="city-group" id="group-rome">
                 <div class="city-name">Rome (Aug 11-14 / 16-18)</div>
-                
-                <!-- Mr. 100 Tiramisu -->
-                <div class="food-card" style="border-left-color: #ff6e40;">
-                    <div class="status-header">
-                        <h4>Mr. 100 Tiramisù</h4>
-                        <span class="status-badge bookmark" style="background:#ff6e40;">Dessert & Wine</span>
-                    </div>
-                    <p class="food-meta">Over 100 artisan tiramisu flavor combinations, plus wine, cheeses & charcuterie near Piazza Navona.</p>
-                    <div class="btn-group">
-                        <a href="https://mr-100-tiramisu.shop/" target="_blank" class="btn btn-sidebar">Official Site</a>
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Mr.+100+Tiramisu+Rome&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Nerva</a>
-                    </div>
-                </div>
+                <div class="loading-text">Syncing from Google Sheet...</div>
+            </div>
+
+            <div class="city-group" id="group-positano">
+                <div class="city-name">Positano (Aug 14-16)</div>
+                <div class="loading-text">Syncing from Google Sheet...</div>
             </div>
         </div>
 
     </div>
 
     <script>
-        // Interactive Category Filter Logic
+        // =========================================================================
+        // CONFIGURATION: PASTE YOUR PUBLISHED GOOGLE SHEET CSV & FORM LINKS HERE
+        // =========================================================================
+        const GOOGLE_SHEET_CSV_URL = "YOUR_PUBLISHED_GOOGLE_SHEET_CSV_URL_HERE";
+        const GOOGLE_FORM_URL = "YOUR_GOOGLE_FORM_URL_HERE"; 
+
+        if (GOOGLE_FORM_URL && GOOGLE_FORM_URL !== "YOUR_GOOGLE_FORM_URL_HERE") {
+            document.getElementById('googleFormLink').href = GOOGLE_FORM_URL;
+        }
+
+        // Automatic Hotel Lookup Map for 1-Touch Directions
+        const HOTEL_ORIGINS = {
+            'verona': 'Moxy Verona',
+            'venice': "Hotel L'Orologio Venezia",
+            'florence': 'Sina Villa Medici Florence',
+            'rome': 'Nerva Boutique Hotel Rome',
+            'positano': 'Villa Mary Suites Positano'
+        };
+
+        // Timeline Category Filtering
         function filterCategory(category) {
-            const buttons = document.querySelectorAll('.filter-nav');
+            const buttons = document.querySelectorAll('.filter-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
@@ -811,19 +730,128 @@
             });
         }
 
-        // Mobile Sidebar Slide-out Logic
+        // Mobile Sidebar Toggle
         function toggleSidebar() {
-            const sidebar = document.getElementById('culinary-sidebar');
+            const sidebar = document.getElementById('bookmarks-sidebar');
             sidebar.classList.toggle('open');
             const btn = document.querySelector('.mobile-food-toggle');
             if(sidebar.classList.contains('open')) {
                 btn.innerHTML = "❌ Close Panel";
                 btn.style.background = "#e71d36";
             } else {
-                btn.innerHTML = "🍴 Food Bookmarks";
+                btn.innerHTML = "📌 Bookmarks & Ideas";
                 btn.style.background = "#9b5de5";
             }
         }
+
+        // =========================================================================
+        // DYNAMIC GOOGLE SHEET CSV FETCH & PARSER (SUPPORTING AUTOMATED WALKING ROUTES)
+        // =========================================================================
+        async function fetchSheetData() {
+            if (!GOOGLE_SHEET_CSV_URL || GOOGLE_SHEET_CSV_URL === "YOUR_PUBLISHED_GOOGLE_SHEET_CSV_URL_HERE") {
+                renderFallbackBookmarks();
+                return;
+            }
+
+            try {
+                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                const csvData = await response.text();
+                const rows = parseCSV(csvData);
+
+                document.querySelectorAll('.loading-text').forEach(el => el.remove());
+
+                // Row parsing: [0:Timestamp, 1:City, 2:Type, 3:Name, 4:Tag, 5:Address, 6:Description, 7:Website Link]
+                rows.slice(1).forEach(row => {
+                    if (!row || row.length < 4) return;
+                    const city = (row[1] || '').trim().toLowerCase();
+                    const type = (row[2] || 'Food').trim().toLowerCase();
+                    const name = (row[3] || '').trim();
+                    const tag = (row[4] || (type === 'activity' ? 'Activity' : 'Food Spot')).trim();
+                    const address = (row[5] || '').trim();
+                    const desc = (row[6] || '').trim();
+                    const link = (row[7] || '').trim();
+
+                    if (name && city) {
+                        renderBookmarkCard(city, type, name, tag, address, desc, link);
+                    }
+                });
+            } catch (err) {
+                console.error("Error fetching Google Sheet:", err);
+                renderFallbackBookmarks();
+            }
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r\n|\n/);
+            return lines.map(line => {
+                const result = [];
+                let cell = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const c = line[i];
+                    if (c === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (c === ',' && !inQuotes) {
+                        result.push(cell);
+                        cell = '';
+                    } else {
+                        cell += c;
+                    }
+                }
+                result.push(cell);
+                return result;
+            });
+        }
+
+        function renderBookmarkCard(city, type, name, tag, address, desc, link) {
+            const container = document.getElementById('group-' + city.toLowerCase());
+            if (!container) return;
+
+            const card = document.createElement('div');
+            const isActivity = (type === 'activity');
+            card.className = `bookmark-card ${isActivity ? 'type-activity' : 'type-food'}`;
+
+            const badgeClass = isActivity ? 'activity-tag' : 'food-tag';
+
+            let buttonsHtml = '';
+            
+            // Generate 1-Touch Walking Directions if address or spot name exists
+            const destinationQuery = address || `${name}, ${city}`;
+            const originHotel = HOTEL_ORIGINS[city.toLowerCase()] || '';
+            const routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originHotel)}&destination=${encodeURIComponent(destinationQuery)}&travelmode=walking`;
+
+            buttonsHtml += `<a href="${routeUrl}" target="_blank" class="btn btn-sidebar route-btn">🚶‍♂️ Route from Hotel</a>`;
+
+            if (link) {
+                buttonsHtml += `<a href="${link}" target="_blank" class="btn btn-sidebar">🌐 Website</a>`;
+            }
+
+            card.innerHTML = `
+                <div class="status-header">
+                    <h4>${name}</h4>
+                    <span class="status-badge ${badgeClass}">${tag}</span>
+                </div>
+                ${desc ? `<p class="bookmark-meta">${desc}</p>` : ''}
+                <div class="btn-group">${buttonsHtml}</div>
+            `;
+
+            container.appendChild(card);
+        }
+
+        // Fallback static bookmarks if Sheet URL isn't pasted yet
+        function renderFallbackBookmarks() {
+            document.querySelectorAll('.loading-text').forEach(el => el.remove());
+            renderBookmarkCard('verona', 'food', 'Cantina del 15', 'Lunch Spot', 'Corso Castelvecchio 15, Verona', 'Casual upscale lunch layout near Castelvecchio.', '');
+            renderBookmarkCard('verona', 'food', 'La Bottega della Gina', 'No Res', 'Via San Maffeo 12, Verona', 'Famous for spectacular handmade tortellini & fresh pasta bowls.', 'https://labottegadellagina.weebly.com/english.html');
+            renderBookmarkCard('florence', 'food', "All'Antico Vinaio", 'Must Visit', 'Via dei Neri 65r, Florence', 'Iconic Florentine schiacciata stuffed sandwiches.', 'https://www.allanticovinaio.com/');
+            renderBookmarkCard('florence', 'food', 'Vivoli Gelateria', 'Gelato', 'Via Isola delle Stinche 7r, Florence', "Classic artisan gelateria famous for gelato & affogato.", 'http://www.vivoli.it/');
+            renderBookmarkCard('rome', 'food', 'Mr. 100 Tiramisù', 'Dessert & Wine', 'Via del Pellegrino 130, Rome', 'Over 100 artisan tiramisu flavor combinations near Piazza Navona.', 'https://mr-100-tiramisu.shop/');
+            renderBookmarkCard('rome', 'activity', 'Mosaic Making Workshop', 'Workshop', 'Trastevere, Rome', 'Hands-on artisan mosaic workshop craft experience.', 'https://www.romeing.it/shop/product/mosaic-making-worshop-rome-trastevere/');
+            renderBookmarkCard('rome', 'activity', 'Lungo il Tevere Roma', 'Festival', 'Lungotevere Ripa, Rome', 'Riverside summer festival along the Tiber featuring food pop-ups, stalls, and music.', 'https://www.lungoiltevereroma.it/');
+            renderBookmarkCard('rome', 'activity', 'Exploration Stop', 'Pinpoint', '41.9022,12.4539', 'Custom pinpoint saved list entry layout.', 'https://share.google/jNkOcp3lmzydOuoyT');
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchSheetData);
     </script>
 </body>
 </html>
