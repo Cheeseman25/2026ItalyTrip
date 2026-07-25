@@ -759,12 +759,12 @@
 
     <script>
         // =========================================================================
-        // CONFIGURATION: PUBLISHED GOOGLE SHEET CSV & APPS SCRIPT URLS
+        // CONFIGURATION: DIRECT GOOGLE VISUALIZATION API & APPS SCRIPT
         // =========================================================================
-        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT6VNuoyGIks8ZFEfzeV-nxwzbSNIw_z3zyqseIphtjJZuU3ioZvXjjjPdMxU2FtftWJpVxIlKRewEw/pub?output=csv";
+        const PUBLISHED_SHEET_KEY = "2PACX-1vT6VNuoyGIks8ZFEfzeV-nxwzbSNIw_z3zyqseIphtjJZuU3ioZvXjjjPdMxU2FtftWJpVxIlKRewEw";
+        const GVIZ_API_URL = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_SHEET_KEY}/gviz/tq?tqx=out:json`;
         const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx1r_ETWB7yVjDjHgoy_c-gQivTZkPFdn38vPmjcRE-u66SiedvgHJLCLW9cZKm-vs/exec"; 
 
-        // Automatic Hotel Lookup Map for 1-Touch Directions
         const HOTEL_ORIGINS = {
             'verona': 'Moxy Verona',
             'venice': "Hotel L'Orologio Venezia",
@@ -773,11 +773,9 @@
             'positano': 'Villa Mary Suites Positano'
         };
 
-        // Modal Controls
         function openModal() { document.getElementById('addSpotModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('addSpotModal').style.display = 'none'; }
 
-        // Timeline Category Filtering
         function filterCategory(category) {
             const buttons = document.querySelectorAll('.filter-nav .filter-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
@@ -795,7 +793,6 @@
             });
         }
 
-        // Mobile Sidebar Toggle
         function toggleSidebar() {
             const sidebar = document.getElementById('bookmarks-sidebar');
             sidebar.classList.toggle('open');
@@ -809,9 +806,6 @@
             }
         }
 
-        // =========================================================================
-        // DIRECT MODAL SUBMISSION TO GOOGLE SHEETS
-        // =========================================================================
         async function submitSpot() {
             const city = document.getElementById('formCity').value;
             const type = document.getElementById('formType').value;
@@ -830,10 +824,8 @@
             btn.innerText = 'Saving...';
             btn.disabled = true;
 
-            // Render immediately on screen for instantaneous user feedback
             renderBookmarkCard(city.toLowerCase(), type.toLowerCase(), name, tag, address, desc, link);
 
-            // Send payload to Google Apps Script
             if (GOOGLE_SCRIPT_WEB_APP_URL) {
                 try {
                     await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
@@ -851,7 +843,6 @@
             btn.disabled = false;
             closeModal();
 
-            // Clear inputs
             document.getElementById('formName').value = '';
             document.getElementById('formTag').value = '';
             document.getElementById('formAddress').value = '';
@@ -859,91 +850,43 @@
             document.getElementById('formLink').value = '';
         }
 
-        // =========================================================================
-        // DYNAMIC GOOGLE SHEET CSV / JSON DUAL FETCH ENGINE
-        // =========================================================================
+        // INSTANT GOOGLE SHEETS DATA FETCH VIA /gviz/tq
         async function fetchSheetData() {
-            let rows = [];
-
-            // Attempt 1: Fetch directly from Published CSV URL
-            if (GOOGLE_SHEET_CSV_URL) {
-                try {
-                    const response = await fetch(GOOGLE_SHEET_CSV_URL);
-                    const csvText = await response.text();
-                    if (csvText && !csvText.startsWith("<!DOCTYPE") && !csvText.startsWith("<html")) {
-                        rows = parseCSV(csvText);
-                    }
-                } catch (e) {
-                    console.warn("CSV Fetch failed, attempting Apps Script...", e);
-                }
-            }
-
-            // Attempt 2: Fallback to Apps Script JSON endpoint if CSV fetch returns empty
-            if ((!rows || rows.length <= 1) && GOOGLE_SCRIPT_WEB_APP_URL) {
-                try {
-                    const response = await fetch(GOOGLE_SCRIPT_WEB_APP_URL);
-                    const result = await response.json();
-                    if (result && result.result === 'success' && Array.isArray(result.data)) {
-                        rows = result.data;
-                    }
-                } catch (e) {
-                    console.warn("Apps Script fetch failed...", e);
-                }
-            }
-
-            document.querySelectorAll('.loading-text').forEach(el => el.remove());
-
-            if (rows && rows.length > 1) {
-                // Header index matching
-                const headers = rows[0].map(h => (h || '').toString().toLowerCase().trim());
+            try {
+                const response = await fetch(GVIZ_API_URL);
+                const text = await response.text();
                 
-                const cityIdx = headers.findIndex(h => h.includes('city')) !== -1 ? headers.findIndex(h => h.includes('city')) : 1;
-                const typeIdx = headers.findIndex(h => h.includes('type')) !== -1 ? headers.findIndex(h => h.includes('type')) : 2;
-                const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('spot')) !== -1 ? headers.findIndex(h => h.includes('name') || h.includes('spot')) : 3;
-                const tagIdx = headers.findIndex(h => h.includes('tag') || h.includes('category')) !== -1 ? headers.findIndex(h => h.includes('tag') || h.includes('category')) : 4;
-                const addrIdx = headers.findIndex(h => h.includes('address') || h.includes('location')) !== -1 ? headers.findIndex(h => h.includes('address') || h.includes('location')) : 5;
-                const descIdx = headers.findIndex(h => h.includes('desc') || h.includes('note')) !== -1 ? headers.findIndex(h => h.includes('desc') || h.includes('note')) : 6;
-                const linkIdx = headers.findIndex(h => h.includes('link') || h.includes('website') || h.includes('url')) !== -1 ? headers.findIndex(h => h.includes('link') || h.includes('website') || h.includes('url')) : 7;
+                // Strip Google's JSONP wrapper: /*O_o*/ google.visualization.Query.setResponse({...});
+                const jsonString = text.substring(47, text.length - 2);
+                const json = JSON.parse(jsonString);
 
-                rows.slice(1).forEach(row => {
-                    if (!row || row.length < 2) return;
-                    const city = (row[cityIdx] || '').toString().trim().toLowerCase();
-                    const type = (row[typeIdx] || 'Food').toString().trim().toLowerCase();
-                    const name = (row[nameIdx] || '').toString().trim();
-                    const tag = (row[tagIdx] || (type === 'activity' ? 'Activity' : 'Food Spot')).toString().trim();
-                    const address = (row[addrIdx] || '').toString().trim();
-                    const desc = (row[descIdx] || '').toString().trim();
-                    const link = (row[linkIdx] || '').toString().trim();
+                document.querySelectorAll('.loading-text').forEach(el => el.remove());
 
-                    if (name && city) {
-                        renderBookmarkCard(city, type, name, tag, address, desc, link);
-                    }
-                });
-            } else {
+                if (json && json.table && json.table.rows && json.table.rows.length > 0) {
+                    json.table.rows.forEach(row => {
+                        if (!row || !row.c) return;
+                        const c = row.c;
+
+                        // Expected Columns: [0:Timestamp, 1:City, 2:Type, 3:Name, 4:Tag, 5:Address, 6:Desc, 7:Link]
+                        const city = (c[1] && c[1].v ? c[1].v : '').toString().trim().toLowerCase();
+                        const type = (c[2] && c[2].v ? c[2].v : 'Food').toString().trim().toLowerCase();
+                        const name = (c[3] && c[3].v ? c[3].v : '').toString().trim();
+                        const tag = (c[4] && c[4].v ? c[4].v : (type === 'activity' ? 'Activity' : 'Food Spot')).toString().trim();
+                        const address = (c[5] && c[5].v ? c[5].v : '').toString().trim();
+                        const desc = (c[6] && c[6].v ? c[6].v : '').toString().trim();
+                        const link = (c[7] && c[7].v ? c[7].v : '').toString().trim();
+
+                        if (name && city) {
+                            renderBookmarkCard(city, type, name, tag, address, desc, link);
+                        }
+                    });
+                } else {
+                    renderFallbackBookmarks();
+                }
+            } catch (err) {
+                console.error("Error loading Google Sheet via GViz:", err);
                 renderFallbackBookmarks();
             }
-        }
-
-        function parseCSV(text) {
-            const lines = text.split(/\r\n|\n/);
-            return lines.map(line => {
-                const result = [];
-                let cell = '';
-                let inQuotes = false;
-                for (let i = 0; i < line.length; i++) {
-                    const c = line[i];
-                    if (c === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (c === ',' && !inQuotes) {
-                        result.push(cell);
-                        cell = '';
-                    } else {
-                        cell += c;
-                    }
-                }
-                result.push(cell);
-                return result;
-            });
         }
 
         function renderBookmarkCard(city, type, name, tag, address, desc, link) {
