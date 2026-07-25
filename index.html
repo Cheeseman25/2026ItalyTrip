@@ -759,9 +759,8 @@
 
     <script>
         // =========================================================================
-        // CONFIGURATION: LIVE GOOGLE SCRIPT WEB APP & PUBLISHED CSV URLS
+        // CONFIGURATION: LIVE GOOGLE SCRIPT WEB APP ENDPOINT
         // =========================================================================
-        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT6VNuoyGIks8ZFEfzeV-nxwzbSNIw_z3zyqseIphtjJZuU3ioZvXjjjPdMxU2FtftWJpVxIlKRewEw/pub?output=csv";
         const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx1r_ETWB7yVjDjHgoy_c-gQivTZkPFdn38vPmjcRE-u66SiedvgHJLCLW9cZKm-vs/exec"; 
 
         // Automatic Hotel Lookup Map for 1-Touch Directions
@@ -860,62 +859,43 @@
         }
 
         // =========================================================================
-        // DYNAMIC GOOGLE SHEET CSV FETCH & PARSER
+        // DYNAMIC GOOGLE SHEET FETCH (VIA APPS SCRIPT JSON ENDPOINT)
         // =========================================================================
         async function fetchSheetData() {
-            if (!GOOGLE_SHEET_CSV_URL) {
+            if (!GOOGLE_SCRIPT_WEB_APP_URL) {
                 renderFallbackBookmarks();
                 return;
             }
 
             try {
-                const response = await fetch(GOOGLE_SHEET_CSV_URL);
-                const csvData = await response.text();
-                const rows = parseCSV(csvData);
+                const response = await fetch(GOOGLE_SCRIPT_WEB_APP_URL);
+                const result = await response.json();
 
-                document.querySelectorAll('.loading-text').forEach(el => el.remove());
+                if (result.result === 'success' && Array.isArray(result.data)) {
+                    document.querySelectorAll('.loading-text').forEach(el => el.remove());
 
-                // Row parsing: [0:Timestamp, 1:City, 2:Type, 3:Name, 4:Tag, 5:Address, 6:Description, 7:Website Link]
-                rows.slice(1).forEach(row => {
-                    if (!row || row.length < 4) return;
-                    const city = (row[1] || '').trim().toLowerCase();
-                    const type = (row[2] || 'Food').trim().toLowerCase();
-                    const name = (row[3] || '').trim();
-                    const tag = (row[4] || (type === 'activity' ? 'Activity' : 'Food Spot')).trim();
-                    const address = (row[5] || '').trim();
-                    const desc = (row[6] || '').trim();
-                    const link = (row[7] || '').trim();
+                    // Rows format: [0:Timestamp, 1:City, 2:Type, 3:Name, 4:Tag, 5:Address, 6:Description, 7:Website Link]
+                    result.data.slice(1).forEach(row => {
+                        if (!row || row.length < 4) return;
+                        const city = (row[1] || '').toString().trim().toLowerCase();
+                        const type = (row[2] || 'Food').toString().trim().toLowerCase();
+                        const name = (row[3] || '').toString().trim();
+                        const tag = (row[4] || (type === 'activity' ? 'Activity' : 'Food Spot')).toString().trim();
+                        const address = (row[5] || '').toString().trim();
+                        const desc = (row[6] || '').toString().trim();
+                        const link = (row[7] || '').toString().trim();
 
-                    if (name && city) {
-                        renderBookmarkCard(city, type, name, tag, address, desc, link);
-                    }
-                });
+                        if (name && city) {
+                            renderBookmarkCard(city, type, name, tag, address, desc, link);
+                        }
+                    });
+                } else {
+                    renderFallbackBookmarks();
+                }
             } catch (err) {
-                console.error("Error fetching Google Sheet:", err);
+                console.error("Error fetching Google Sheet via Apps Script:", err);
                 renderFallbackBookmarks();
             }
-        }
-
-        function parseCSV(text) {
-            const lines = text.split(/\r\n|\n/);
-            return lines.map(line => {
-                const result = [];
-                let cell = '';
-                let inQuotes = false;
-                for (let i = 0; i < line.length; i++) {
-                    const c = line[i];
-                    if (c === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (c === ',' && !inQuotes) {
-                        result.push(cell);
-                        cell = '';
-                    } else {
-                        cell += c;
-                    }
-                }
-                result.push(cell);
-                return result;
-            });
         }
 
         function renderBookmarkCard(city, type, name, tag, address, desc, link) {
