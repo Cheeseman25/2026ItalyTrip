@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Italian Adventure - Interactive Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #1e3d59;
+            --secondary-color: #ff6e40;
+            --accent-color: #ffc13b;
+            --bg-color: #f5f0e1;
+            --text-dark: #333333;
+            --text-light: #ffffff;
+            --card-bg: #ffffff;
+            --status-confirmed: #2ec4b6;
+            --status-pending: #e71d36;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-dark); line-height: 1.6; padding-bottom: 60px; }
+        
+        header {
+            background: linear-gradient(rgba(30, 61, 89, 0.85), rgba(30, 61, 89, 0.95)), 
+                        url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=1200&q=80') no-repeat center center/cover;
+            color: var(--text-light); text-align: center; padding: 60px 20px 30px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        header h1 { font-size: 2.8rem; margin-bottom: 10px; font-family: 'Georgia', serif; letter-spacing: 2px; }
+        header p { font-size: 1.1rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 3px; font-weight: 600; }
+        
+        /* Filter Control Bar */
+        .filter-nav {
+            position: sticky; top: 0; background: var(--primary-color); padding: 12px;
+            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; z-index: 100;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .filter-btn {
+            background: rgba(255,255,255,0.15); color: white; border: none; padding: 8px 16px;
+            border-radius: 20px; font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: all 0.2s ease;
+        }
+        .filter-btn.active, .filter-btn:hover { background: var(--secondary-color); color: white; }
+
+        /* Master Grid Layout for Timeline + Side Panel */
+        .dashboard-layout {
+            max-width: 1300px; margin: 30px auto; padding: 0 20px;
+            display: grid; grid-template-columns: 1fr 320px; gap: 30px;
+        }
+        
+        /* Alternating Timeline Structure */
+        .timeline { position: relative; max-width: 900px; margin: 0 auto; width: 100%; }
+        .timeline::after {
+            content: ''; position: absolute; width: 6px; background-color: var(--primary-color);
+            top: 0; bottom: 0; left: 50%; margin-left: -3px; border-radius: 3px;
+        }
+        
+        .day-card { padding: 10px 40px; position: relative; background-color: inherit; width: 50%; transition: all 0.4s ease; }
+        .day-card::after {
+            content: ''; position: absolute; width: 20px; height: 20px; right: -10px;
+            background-color: var(--accent-color); border: 4px solid var(--text-light); top: 25px; border-radius: 50%; z-index: 1;
+        }
+        .left { left: 0; }
+        .right { left: 50%; }
+        .right::after { left: -10px; }
+        
+        .content {
+            padding: 25px; background-color: var(--card-bg); position: relative; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-top: 5px solid var(--primary-color);
+        }
+        .right-accent { border-top-color: var(--secondary-color); }
+        
+        /* Status Headers */
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .status-badge { padding: 3px 8px; border-radius: 4px; color: white; }
+        .status-badge.ok { background: var(--status-confirmed); }
+        .status-badge.action { background: var(--status-pending); }
+        .status-badge.bookmark { background: #9b5de5; }
+
+        /* Directions Icon Action Link */
+        .maps-icon-link {
+            text-decoration: none; font-size: 1.3rem; display: inline-flex; align-items: center;
+            justify-content: center; background: #e8f0fe; border-radius: 50%; width: 34px; height: 34px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;
+        }
+        .maps-icon-link:hover { transform: scale(1.1); background: #d2e3fc; }
+
+        .date { font-size: 1.1rem; font-weight: 700; color: var(--primary-color); }
+        .right-accent .date { color: var(--secondary-color); }
+        h3 { font-size: 1.3rem; margin: 8px 0; font-family: 'Georgia', serif; padding-right: 25px; }
+        
+        .details-list { list-style: none; font-size: 0.95rem; margin-top: 10px; }
+        .details-list li { margin-bottom: 8px; padding-left: 20px; position: relative; }
+        .details-list li::before { content: '•'; position: absolute; left: 0; color: var(--secondary-color); font-weight: bold; }
+        
+        /* Culinary Side Panel Design with Independent Viewport Scrolling */
+        .culinary-sidebar {
+            background: var(--card-bg); padding: 25px; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-top: 5px solid #9b5de5;
+            position: sticky; top: 80px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
+        .sidebar-title { font-family: 'Georgia', serif; font-size: 1.4rem; color: var(--primary-color); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .city-group { margin-bottom: 20px; }
+        .city-name { font-weight: bold; text-transform: uppercase; font-size: 0.85rem; color: #777; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 10px; }
+        .food-card { background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #9b5de5; position: relative; }
+        .food-card h4 { font-family: 'Georgia', serif; font-size: 1.05rem; color: var(--text-dark); }
+        .food-meta { font-size: 0.8rem; color: #666; margin-top: 4px; }
+        
+        /* Floating Mobile Toggle for Sidebar */
+        .mobile-food-toggle {
+            display: none; position: fixed; bottom: 20px; right: 20px; background: #9b5de5; color: white;
+            border: none; padding: 12px 20px; border-radius: 30px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000; cursor: pointer; align-items: center; gap: 8px;
+        }
+
+        /* Embedded Image Barcode Layout */
+        .barcode-container { background: #f8f9fa; padding: 10px; border-radius: 6px; text-align: center; margin-top: 15px; border: 1px dashed #ccc; }
+        .barcode-label { font-size: 0.75rem; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; }
+        .barcode-img { width: 150px; height: 150px; display: block; margin: 0 auto; }
+
+        .btn-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .btn {
+            display: inline-block; background-color: var(--primary-color); color: white; padding: 8px 14px;
+            text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: bold;
+        }
+        .btn:hover { background-color: #12263a; }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: #e05326; }
+        .btn-sidebar { background: #9b5de5; font-size: 0.75rem; padding: 4px 8px; margin-top: 6px; text-align: center; }
+        .btn-sidebar:hover { background: #7b3fd3; }
+
+        @media screen and (max-width: 992px) {
+            .dashboard-layout { grid-template-columns: 1fr; }
+            .culinary-sidebar { 
+                position: fixed; top: 0; right: -340px; width: 320px; height: 100vh; 
+                max-height: 100vh; z-index: 2000; overflow-y: auto; transition: right 0.3s ease; border-radius: 0;
+            }
+            .culinary-sidebar.open { right: 0; }
+            .mobile-food-toggle { display: flex; }
+        }
+
+        @media screen and (max-width: 768px) {
+            .timeline::after { left: 31px; }
+            .day-card { width: 100%; padding-left: 70px; padding-right: 25px; }
+            .day-card::after { left: 21px; }
+            .right { left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Our Italian Adventure</h1>
+        <p>August 2026 Master Tracking Dashboard</p>
+    </header>
+
+    <div class="filter-nav">
+        <button class="filter-btn active" onclick="filterCategory('all')">🗓️ Full Timeline</button>
+        <button class="filter-btn" onclick="filterCategory('hotel')">🏨 Hotels Stay</button>
+        <button class="filter-btn" onclick="filterCategory('transit')">🚆 Trains & Cars</button>
+        <button class="filter-btn" onclick="filterCategory('activity')">🍕 Activities</button>
+    </div>
+
+    <!-- Toggle Button for Mobile Devices -->
+    <button class="mobile-food-toggle" onclick="toggleSidebar()">🍴 Food Bookmarks</button>
+
+    <div class="dashboard-layout">
+        
+        <!-- MAINLINE TIMELINE PANEL -->
+        <div class="timeline">
+            
+            <!-- Day 1: MXP Transfer -->
+            <div class="day-card left type-transit">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 5, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Private Airport Transfer</h3>
+                    <ul class="details-list">
+                        <li><strong>Route:</strong> Milan Malpensa (MXP) &rarr; Verona Hills</li>
+                        <li><strong>Vehicle:</strong> Chauffeur Mercedes Van (Fits 4 + Large Luggage)</li>
+                        <li><strong>Rate Status:</strong> Fixed-rate transfer locked in.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 1: Verona Hotel -->
+            <div class="day-card right type-hotel">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 5, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Relais Fra' Lorenzo (Verona)</h3>
+                    <ul class="details-list">
+                        <li><strong>Stay Info:</strong> Night 1 Arrival in Italy</li>
+                        <li><strong>Perks:</strong> Verified complimentary early check-in requested for party.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.fralorenzo.com" target="_blank" class="btn btn-secondary">Go to Hotel Site</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 2: Free Shuttle Transfer -->
+            <div class="day-card left type-transit">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Hotel-to-Hotel Shuttle</h3>
+                    <ul class="details-list">
+                        <li><strong>Route:</strong> Relais Fra' Lorenzo &rarr; Moxy Verona</li>
+                        <li><strong>Transit Type:</strong> Complimentary hotel shuttle service</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 2: Piazza Bra & Arena Transit -->
+            <div class="day-card right type-transit">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <span class="status-badge ok">Local Taxi</span>
+                    </div>
+                    <h3>Moxy &rarr; Piazza Bra Transit</h3>
+                    <ul class="details-list">
+                        <li><strong>Plan:</strong> Start the morning layout directly at Verona's central square.</li>
+                        <li><strong>Logistics:</strong> Short 5-minute taxi queue right from the front steps of the Moxy.</li>
+                        <li><strong>Sights:</strong> Houses the grand Roman Amphitheater (Verona Arena).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 2: Tourist Office Scavenger Hunt -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Verona Information Center</h3>
+                    <ul class="details-list">
+                        <li><strong>Location:</strong> Directly inside Piazza Bra.</li>
+                        <li><strong>Oliver's Activity:</strong> Pick up the custom Verona kids' exploration map and Scavenger Hunt package at the desk.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 2: Walk to Juliet's House -->
+            <div class="day-card right type-activity">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Piazza+Bra,+Verona&destination=Casa+di+Giulietta,+Verona&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Juliet's House (Casa de Giulietta)</h3>
+                    <ul class="details-list">
+                        <li><strong>Activity:</strong> Quick look at the famous balcony structure.</li>
+                        <li><strong>Route:</strong> Short scenic walking route down Via Mazzini from Piazza Bra.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 2: Biblioteca Capitolare Activity -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Casa+di+Giulietta,+Verona&destination=Biblioteca+Capitolare+di+Verona&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Biblioteca Capitolare di Verona</h3>
+                    <ul class="details-list">
+                        <li><strong>Timing:</strong> Sharp morning opening layout at 11:00 AM</li>
+                        <li><strong>Highlight:</strong> Exploring the oldest active library layout in the world.</li>
+                        <li><strong>Directions:</strong> Mapped directly as a quick walk through Piazza delle Erbe from Juliet's House.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.bibliotecacapitolare.it/?lan=en" target="_blank" class="btn btn-secondary">Official Library Site</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 2: Castelvecchio Bridge Walk -->
+            <div class="day-card right type-activity">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Biblioteca+Capitolare+di+Verona&destination=Castelvecchio,+Verona&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Castelvecchio Castle & Scaliger Bridge</h3>
+                    <ul class="details-list">
+                        <li><strong>Mid-Day Break:</strong> Exploring the medieval fortress walls and crossing the historic red-brick bridge arches over the Adige.</li>
+                        <li><strong>Route Flow:</strong> Mapped as an afternoon stroll directly from the Library exit toward the theater tracks.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 2: Gelato Activity -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Gelato Masterclass (Verona)</h3>
+                    <ul class="details-list">
+                        <li><strong>Timing:</strong> 3:30 PM (Arrive 15 mins early)</li>
+                        <li><strong>Ref Code:</strong> GYGG45QH83H2 (3 Adults, 1 Child)</li>
+                        <li><strong>Meeting Spot:</strong> Near the Ristori Theater entrance</li>
+                        <li><strong>Directions:</strong> Straight walk down Corso Cavour from Castelvecchio.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 2: Verona City Hotel -->
+            <div class="day-card right type-hotel">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 6, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Moxy Verona Stay</h3>
+                    <ul class="details-list">
+                        <li><strong>Confirmation:</strong> #92782303</li>
+                        <li><strong>Room Class:</strong> Moxy WOW Family Sleeper (Connecting Room setup)</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.marriott.com/en-us/hotels/vrnox-moxy-verona/overview/" target="_blank" class="btn btn-secondary">Go to Moxy Portal</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 3: Train to Venice -->
+            <div class="day-card left type-transit">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 7, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Verona &rarr; Venice High Speed</h3>
+                    <ul class="details-list">
+                        <li><strong>Train:</strong> Italo 8977 | 11:05 AM &rarr; 2:03 PM</li>
+                        <li><strong>Class:</strong> Club Executive (Seats 16, 17, 18, 19)</li>
+                    </ul>
+                    <div class="barcode-container">
+                        <div class="barcode-label">Conductor Scan: Ticket W8S6YR</div>
+                        <img class="barcode-img" src="https://bwipjs-api.metafloor.com/?bcid=azteccode&text=0AY9xxT6MQLxHOkJ%2B0%2FX3t9HgnQYhfZ7UWsBZYsz9Lr8ikk6%2BvnX6kncQh5gS8kXb" alt="Italo Ticket Barcode W8S6YR">
+                    </div>
+                    <div class="btn-group">
+                        <a href="https://www.italotreno.com" target="_blank" class="btn">Manage Italo Ticket</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 3: Venice Hotel -->
+            <div class="day-card right type-hotel">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 7 - 9, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Hotel L'Orologio Venezia</h3>
+                    <ul class="details-list">
+                        <li><strong>Location:</strong> Premium boutique lodging directly on the Grand Canal.</li>
+                        <li><strong>Duration:</strong> 2 Nights confirmed premium stay.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.hotelorologiovenezia.com/" target="_blank" class="btn btn-secondary">View Hotel Site</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 5: Train to Florence -->
+            <div class="day-card left type-transit">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 9, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Venice &rarr; Florence High Speed</h3>
+                    <ul class="details-list">
+                        <li><strong>Train:</strong> Italo 8915 | 14:05 &rarr; 16:20</li>
+                        <li><strong>Class:</strong> Club Executive (Seats 11, 12, 14, 15)</li>
+                    </ul>
+                    <div class="barcode-container">
+                        <div class="barcode-label">Conductor Scan: Ticket OD9WXC</div>
+                        <img class="barcode-img" src="https://bwipjs-api.metafloor.com/?bcid=azteccode&text=0KBJD12K4RN7WVYb8xrmZOnqLvxXY6QPRarYpSjRCC6oqy7i%2BTS9fiAvpZzqsrhUDg7roW%2Fn92PoppuPNdnvkzA%3D%3D" alt="Italo Ticket Barcode OD9WXC">
+                    </div>
+                    <div class="btn-group">
+                        <a href="https://www.italotreno.com" target="_blank" class="btn">Manage Italo Ticket</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 5: Florence Hotel -->
+            <div class="day-card right type-hotel">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 9 - 11, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Sina Villa Medici (Florence)</h3>
+                    <ul class="details-list">
+                        <li><strong>Confirmation:</strong> #89902885</li>
+                        <li><strong>Rooms:</strong> 2 Premium King Guest Rooms (Platinum Elite track)</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.marriott.com/en-us/hotels/flrak-sina-villa-medici-autograph-collection/overview/" target="_blank" class="btn btn-secondary">View Hotel Site</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 6: Florence Sightseeing - Duomo -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 10, 2026</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Sina+Villa+Medici+Florence&destination=Cattedrale+di+Santa+Maria+del+Fiore&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Cathedral of Santa Maria del Fiore</h3>
+                    <ul class="details-list">
+                        <li><strong>Sight:</strong> The world-famous Duomo, Brunelleschi's Dome, and Giotto's Campanile.</li>
+                        <li><strong>Directions:</strong> Mapped as a beautiful, direct 20-minute morning walk east from the Sina Villa Medici lobby door.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://duomo.firenze.it/en/home" target="_blank" class="btn">Official Duomo Site</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 6: Florence Sightseeing - David -->
+            <div class="day-card right type-activity">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 10, 2026</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Cattedrale+di+Santa+Maria+del+Fiore&destination=Galleria+dell'Accademia&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Michelangelo's David (Accademia Gallery)</h3>
+                    <ul class="details-list">
+                        <li><strong>Sight:</strong> The original masterpiece sculpture of David inside the Galleria dell'Accademia.</li>
+                        <li><strong>Directions:</strong> Taps right into a short 7-minute direct walk northward straight from the Cathedral square.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.galleriaaccademiafirenze.it/en/" target="_blank" class="btn btn-secondary">Official Gallery Site</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 6: Florence Activity - Pasta Making Class -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 10, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Pastamania 1st Pasta Class</h3>
+                    <ul class="details-list">
+                        <li><strong>Timing:</strong> 4:00 PM (Duration: 3.5 Hours)</li>
+                        <li><strong>Location:</strong> Lungarno Guicciardini 17r</li>
+                        <li><strong>Directions:</strong> Mapped straight south across the historic Ponte Santa Trinita bridge layout from the Accademia Gallery.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 7: Train to Rome link -->
+            <div class="day-card right type-transit">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 11, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Florence &rarr; Rome High Speed Rail</h3>
+                    <ul class="details-list">
+                        <li><strong>Train:</strong> Italo 8905 | 10:28 AM &rarr; 12:35 PM</li>
+                        <li><strong>Route:</strong> Firenze SMN &rarr; Roma Termini</li>
+                        <li><strong>Class:</strong> Salotto 2 (Coach 1, Seats 5, 6, 7, 8)</li>
+                    </ul>
+                    <div class="barcode-container">
+                        <div class="barcode-label">Conductor Scan: Ticket E8RQ5Y</div>
+                        <img class="barcode-img" src="https://bwipjs-api.metafloor.com/?bcid=azteccode&text=00toZl8PP0DNH5AFfmyFqqTyr6fEmI%2B6cI%2FmNowIWjbxsiwF28itUqPC%2FmOb8qwGf" alt="Italo Ticket Barcode E8RQ5Y">
+                    </div>
+                    <div class="btn-group">
+                        <a href="https://www.italotreno.com" target="_blank" class="btn">Manage Italo Ticket</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 7: Rome Hotel -->
+            <div class="day-card left type-hotel">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 11 - 14, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Nerva Boutique Hotel (Rome)</h3>
+                    <ul class="details-list">
+                        <li><strong>Confirmation:</strong> #5452771515</li>
+                        <li><strong>Room:</strong> Suite - Dependence (Historic Monti District)</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.hotelnerva.com/en/" target="_blank" class="btn btn-secondary">Official Site</a>
+                        <a href="https://www.booking.com/hotel/it/nerva.html" target="_blank" class="btn btn-secondary">Booking.com</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 8: Rome Activity - Shared Target -->
+            <div class="day-card right type-activity">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 12, 2026</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=41.9022,12.4539&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Exploration Stop (Rome Shared Drop)</h3>
+                    <ul class="details-list">
+                        <li><strong>Destination:</strong> Custom pinpoint saved list entry layout added.</li>
+                        <li><strong>Access:</strong> Tap the action buttons below to open directly in your mapping layouts.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://share.google/jNkOcp3lmzydOuoyT" target="_blank" class="btn btn-secondary">View Shared Location</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 8: Rome Activity - Zoo -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 12-13, 2026</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Bioparco+di+Roma&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Bioparco di Roma (Villa Borghese)</h3>
+                    <ul class="details-list">
+                        <li><strong>Activity:</strong> Historic zoo visit inside Rome's premier park layout.</li>
+                        <li><strong>Directions:</strong> Tap the walking icon above to navigate right from Nerva Hotel.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 8: Rome Unscheduled - Mosaic Workshop -->
+            <div class="day-card right type-activity">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 11 - 14, 2026</span>
+                        <span class="status-badge action">Unscheduled</span>
+                    </div>
+                    <h3>Mosaic Making Workshop (Trastevere)</h3>
+                    <ul class="details-list">
+                        <li><strong>Location:</strong> Trastevere District, Rome</li>
+                        <li><strong>Activity:</strong> Hands-on artisan mosaic workshop craft experience.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.romeing.it/shop/product/mosaic-making-worshop-rome-trastevere/" target="_blank" class="btn btn-secondary">Workshop Info & Booking</a>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Trastevere,+Rome&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 8: Rome Evening Event - Lungo il Tevere -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 11 - 13 Evenings</span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Lungo+il+Tevere+Roma&travelmode=walking" target="_blank" class="maps-icon-link" title="Get Walking Directions">🚶‍♂️</a>
+                    </div>
+                    <h3>Lungo il Tevere Roma (Summer Festival)</h3>
+                    <ul class="details-list">
+                        <li><strong>Hours:</strong> 7:00 PM – 2:00 AM (Nightly)</li>
+                        <li><strong>Experience:</strong> Vibrant riverside summer festival along the Tiber featuring food pop-ups, artisan stalls, live music, and evening walks.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.lungoiltevereroma.it/" target="_blank" class="btn">Festival Website</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 10: Transit to South - Train -->
+            <div class="day-card right type-transit">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 14, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Rome &rarr; Naples High Speed Rail</h3>
+                    <ul class="details-list">
+                        <li><strong>Train:</strong> Italo | Departs 10:00 AM</li>
+                        <li><strong>Route:</strong> Roma Termini &rarr; Napoli Centrale</li>
+                        <li><strong>Class:</strong> Club Executive (Party of 4)</li>
+                        <li><strong>Perks:</strong> Includes Club Lounge access & Fast Track boarding.</li>
+                    </ul>
+                    <div class="barcode-container">
+                        <div class="barcode-label">Conductor Scan: Ticket JDZ8YC</div>
+                        <img class="barcode-img" src="https://bwipjs-api.metafloor.com/?bcid=azteccode&text=JDZ8YC" alt="Italo Ticket Barcode JDZ8YC">
+                    </div>
+                    <div class="btn-group">
+                        <a href="https://www.italotreno.com" target="_blank" class="btn">Manage Italo Ticket</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 10: Car Service Pompeii & Positano Transfer -->
+            <div class="day-card left type-transit">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 14, 2026</span>
+                        <span class="status-badge action">Action Required</span>
+                    </div>
+                    <h3>Naples &rarr; Pompeii &rarr; Positano Chauffeur</h3>
+                    <ul class="details-list">
+                        <li><strong>Car Service:</strong> Private van driver pickup at Napoli Centrale to hold luggage during Pompeii stop, then transfer to Positano.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 10: Positano Villa -->
+            <div class="day-card right type-hotel">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 14 - 16, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Villa Mary Suites (Positano)</h3>
+                    <ul class="details-list">
+                        <li><strong>Status:</strong> Confirmed & Secured!</li>
+                        <li><strong>Layout Locked:</strong> The Venere Suite + Diana Deluxe Premium Room setup.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.villamary.it" target="_blank" class="btn btn-secondary">View Villa Mary Portal</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 11: Food Activity -->
+            <div class="day-card left type-activity">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 15, 2026</span>
+                        <span class="status-badge action">Awaiting Reply</span>
+                    </div>
+                    <h3>Positano Pizza Experience</h3>
+                    <ul class="details-list">
+                        <li><strong>Status:</strong> Booking request sent for 4 people on July 11. Awaiting final provider verification.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 12: Return Transit North -->
+            <div class="day-card right type-transit">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 16, 2026</span>
+                        <span class="status-badge action">Action Required</span>
+                    </div>
+                    <h3>Positano &rarr; Rome Return</h3>
+                    <ul class="details-list">
+                        <li><strong>Transit Need:</strong> Schedule return private van route up coast or Naples high-speed rail link back to Rome.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 12: Rome Final Stay Buffer -->
+            <div class="day-card left type-hotel">
+                <div class="content">
+                    <div class="status-header">
+                        <span class="date">Aug 16 - 18, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Rome Marriott Park Hotel</h3>
+                    <ul class="details-list">
+                        <li><strong>Status:</strong> 2 Rooms Fully Confirmed (#95574079 & #95574077)</li>
+                        <li><strong>Setup:</strong> 3 Adults, 1 Child per room capacity locked.</li>
+                        <li><strong>Infrastructure Note:</strong> Onsite fitness/spa centers under facility renovation.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.marriott.com/en-us/hotels/romap-rome-marriott-park-hotel/overview/" target="_blank" class="btn">View Property Site</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 14: International Flight Home -->
+            <div class="day-card right type-transit">
+                <div class="content right-accent">
+                    <div class="status-header">
+                        <span class="date">Aug 18, 2026</span>
+                        <span class="status-badge ok">Confirmed</span>
+                    </div>
+                    <h3>Flight: Rome (FCO) &rarr; Boston (BOS)</h3>
+                    <ul class="details-list">
+                        <li><strong>Flight:</strong> ITA Airways AZ614 | Code: ZB2WHF</li>
+                        <li><strong>Seats:</strong> Premium Economy layout on Airbus A330-900Neo</li>
+                        <li><strong>Timing:</strong> Departs 10:25 AM | Arrives Boston Logan at 1:40 PM.</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://www.ita-airways.com" target="_blank" class="btn btn-secondary">ITA Airways Flight Manager</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CULINARY BOOKMARKS SIDE PANEL -->
+        <div class="culinary-sidebar" id="culinary-sidebar">
+            <div class="sidebar-title">🍴 Culinary Bookmarks</div>
+            
+            <!-- Verona Bookmarks -->
+            <div class="city-group">
+                <div class="city-name">Verona (Aug 5-7)</div>
+                
+                <!-- Cantina del 15 -->
+                <div class="food-card" style="border-left-color: #ffc13b;">
+                    <div class="status-header">
+                        <h4>Cantina del 15</h4>
+                        <span class="status-badge bookmark" style="background:#ffc13b;">Lunch Spot</span>
+                    </div>
+                    <p class="food-meta">Highly tracking casual upscale lunch layout. Fantastic local plates and wines near Castelvecchio.</p>
+                    <div class="btn-group">
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Castelvecchio,+Verona&destination=Cantina+del+15+Verona&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Castle</a>
+                    </div>
+                </div>
+
+                <div class="food-card">
+                    <div class="status-header">
+                        <h4>La Bottega della Gina</h4>
+                        <span class="status-badge bookmark">No Res</span>
+                    </div>
+                    <p class="food-meta">Famous for spectacular handmade tortellini & fresh pasta bowls.</p>
+                    <div class="btn-group">
+                        <a href="https://labottegadellagina.weebly.com/english.html" target="_blank" class="btn btn-sidebar">View Menu Links</a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=La+Bottega+della+Gina+Verona&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Map Route</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Venice Bookmarks Placeholder -->
+            <div class="city-group">
+                <div class="city-name">Venice (Aug 7-9)</div>
+                <p style="font-size:0.85rem; color:#999; font-style:italic;">No bookmarks added yet.</p>
+            </div>
+
+            <!-- Florence Bookmarks -->
+            <div class="city-group">
+                <div class="city-name">Florence (Aug 9-11)</div>
+                
+                <!-- All'Antico Vinaio -->
+                <div class="food-card">
+                    <div class="status-header">
+                        <h4>All'Antico Vinaio</h4>
+                        <span class="status-badge bookmark">Must Visit</span>
+                    </div>
+                    <p class="food-meta">Iconic Florentine schiacciata stuffed sandwiches. Expect a quick-moving line!</p>
+                    <div class="btn-group">
+                        <a href="https://www.allanticovinaio.com/" target="_blank" class="btn btn-sidebar">Official Site</a>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Cattedrale+di+Santa+Maria+del+Fiore&destination=All'Antico+Vinaio+Florence&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Duomo</a>
+                    </div>
+                </div>
+
+                <!-- Vivoli Gelateria -->
+                <div class="food-card" style="border-left-color: #2ec4b6;">
+                    <div class="status-header">
+                        <h4>Vivoli Gelateria</h4>
+                        <span class="status-badge bookmark" style="background:#2ec4b6;">Gelato</span>
+                    </div>
+                    <p class="food-meta">One of Florence's oldest artisan gelaterias, famous for classic gelato & affogato.</p>
+                    <div class="btn-group">
+                        <a href="http://www.vivoli.it/" target="_blank" class="btn btn-sidebar">Official Site</a>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Cattedrale+di+Santa+Maria+del+Fiore&destination=Vivoli+Florence&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Duomo</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rome Bookmarks -->
+            <div class="city-group">
+                <div class="city-name">Rome (Aug 11-14 / 16-18)</div>
+                
+                <!-- Mr. 100 Tiramisu -->
+                <div class="food-card" style="border-left-color: #ff6e40;">
+                    <div class="status-header">
+                        <h4>Mr. 100 Tiramisù</h4>
+                        <span class="status-badge bookmark" style="background:#ff6e40;">Dessert & Wine</span>
+                    </div>
+                    <p class="food-meta">Over 100 artisan tiramisu flavor combinations, plus wine, cheeses & charcuterie near Piazza Navona.</p>
+                    <div class="btn-group">
+                        <a href="https://mr-100-tiramisu.shop/" target="_blank" class="btn btn-sidebar">Official Site</a>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=Nerva+Boutique+Hotel+Rome&destination=Mr.+100+Tiramisu+Rome&travelmode=walking" target="_blank" class="btn btn-sidebar" style="background:#4285F4;">Route from Nerva</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Interactive Category Filter Logic
+        function filterCategory(category) {
+            const buttons = document.querySelectorAll('.filter-nav');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const cards = document.querySelectorAll('.day-card');
+            cards.forEach(card => {
+                if (category === 'all') {
+                    card.style.display = 'block';
+                } else if (card.classList.contains('type-' + category)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Mobile Sidebar Slide-out Logic
+        function toggleSidebar() {
+            const sidebar = document.getElementById('culinary-sidebar');
+            sidebar.classList.toggle('open');
+            const btn = document.querySelector('.mobile-food-toggle');
+            if(sidebar.classList.contains('open')) {
+                btn.innerHTML = "❌ Close Panel";
+                btn.style.background = "#e71d36";
+            } else {
+                btn.innerHTML = "🍴 Food Bookmarks";
+                btn.style.background = "#9b5de5";
+            }
+        }
+    </script>
+</body>
+</html>
